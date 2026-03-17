@@ -4,11 +4,10 @@ import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { Wallet } from 'lucide-react';
-
-import { auth } from '../firebase/config';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useExpenses } from '../context/ExpenseContext';
 
 const Login = () => {
+  const { login } = useExpenses();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,11 +24,10 @@ const Login = () => {
     setLoading(true);
     
     try {
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      await login(formData.email, formData.password);
       navigate('/');
     } catch (err) {
-      console.error('Login error', err);
-      setError('Invalid email or password. Please try again.');
+      setError(err.message || 'Invalid email or password.');
     } finally {
       setLoading(false);
     }

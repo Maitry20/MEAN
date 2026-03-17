@@ -80,11 +80,8 @@ const ExpenseHistory = () => {
             <tbody>
               {filteredExpenses.length > 0 ? (
                 filteredExpenses.map((expense) => {
-                  const member = members.find(m => m.id === expense.memberId);
-                  const memberName = member ? member.name : 'Unknown';
-                  
                   return (
-                    <tr key={expense.id} style={{ borderBottom: '1px solid var(--border-color)' }} className="table-row">
+                    <tr key={expense._id} style={{ borderBottom: '1px solid var(--border-color)' }} className="table-row">
                       <td style={{ padding: '1rem 1.5rem', whiteSpace: 'nowrap' }}>{new Date(expense.date).toLocaleDateString()}</td>
                       <td style={{ padding: '1rem 1.5rem', fontWeight: 500 }}>{expense.description}</td>
                       <td style={{ padding: '1rem 1.5rem' }}>
@@ -99,7 +96,7 @@ const ExpenseHistory = () => {
                           {expense.category}
                         </span>
                       </td>
-                      <td style={{ padding: '1rem 1.5rem', fontSize: '0.875rem' }}>{memberName}</td>
+                      <td style={{ padding: '1rem 1.5rem', fontSize: '0.875rem' }}>{expense.addedBy || 'Unknown'}</td>
                       <td style={{ padding: '1rem 1.5rem' }}>
                         <span style={{ 
                           fontSize: '0.75rem', 
@@ -110,19 +107,13 @@ const ExpenseHistory = () => {
                           {expense.type}
                         </span>
                       </td>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: expense.type === 'credited' ? 'var(--success)' : 'inherit' }}>
-                      {expense.type === 'credited' ? '+' : '-'}${expense.amount.toFixed(2)}
-                    </td>
+                      <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: expense.type === 'credited' ? 'var(--success)' : 'inherit' }}>
+                        {expense.type === 'credited' ? '+' : '-'}₹{(Number(expense.amount) || 0).toFixed(2)}
+                      </td>
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                           <button 
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: '0.25rem' }}
-                            title="Edit"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button 
-                            onClick={() => deleteExpense && deleteExpense(expense.id)}
+                            onClick={() => deleteExpense && deleteExpense(expense._id)}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '0.25rem' }}
                             title="Delete"
                           >
@@ -135,7 +126,7 @@ const ExpenseHistory = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     No expenses found matching the selected filters.
                   </td>
                 </tr>

@@ -1,235 +1,141 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { db, auth } from '../firebase/config';
-import { 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  query, 
-  where,
-  orderBy, 
-  serverTimestamp 
-} from 'firebase/firestore';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../api/client';
 
 const ExpenseContext = createContext();
-
-export const useExpenses = () => {
-  const context = useContext(ExpenseContext);
-  if (!context) {
-    throw new Error('useExpenses must be used within an ExpenseProvider');
-  }
-  return context;
-};
+export const useExpenses = () => useContext(ExpenseContext);
 
 export const ExpenseProvider = ({ children }) => {
-  const [userProfile, setUserProfile] = useState(null);
+  const [userProfile, setUserProfile] = useState(() => {
+    const saved = localStorage.getItem('user_profile');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [expenses, setExpenses] = useState([]);
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  // 1. Manage User Profile & Account ID
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          setUserProfile(userDoc.data());
-        } else {
-          // Create initial profile if missing
-          const initialProfile = {
-            uid: user.uid,
-            email: user.email.toLowerCase(),
-            name: user.displayName || 'User',
-            accountId: user.uid // Default account is their own UID
-          };
-          await setDoc(userDocRef, initialProfile);
-          setUserProfile(initialProfile);
-        }
-      } else {
-        setUserProfile(null);
-        setExpenses([]);
-        setMembers([]);
-        setPendingInvites([]);
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // 2. Sync Expenses based on accountId
-  useEffect(() => {
-    if (!userProfile?.accountId) return;
-
-    const q = query(
-      collection(db, 'expenses'), 
-      where('accountId', '==', userProfile.accountId),
-      orderBy('date', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const expenseData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setExpenses(expenseData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userProfile?.accountId]);
-
-  // 3. Sync Members based on accountId
-  useEffect(() => {
-    if (!userProfile?.accountId) return;
-
-    const q = query(
-      collection(db, 'members'),
-      where('accountId', '==', userProfile.accountId)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const memberData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      if (memberData.length === 0) {
-        // Initialize with primary user if empty
-        setMembers([{ id: 'm1', name: userProfile.name, email: userProfile.email }]);
-      } else {
-        setMembers(memberData);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [userProfile?.accountId]);
-
-  // 4. Listen for Pending Invites
-  useEffect(() => {
-    if (!userProfile?.email) return;
-
-    const q = query(
-      collection(db, 'invites'),
-      where('toEmail', '==', userProfile.email.toLowerCase()),
-      where('status', '==', 'pending')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const inviteData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPendingInvites(inviteData);
-    });
-
-    return () => unsubscribe();
-  }, [userProfile?.email]);
-
-  const addExpense = async (newExpense) => {
-    if (!userProfile?.accountId) return;
+  // Load expenses from API
+  const loadExpenses = useCallback(async () => {
+    if (!userProfile) return;
+    setLoading(true);
     try {
-      await addDoc(collection(db, 'expenses'), {
-        ...newExpense,
-        accountId: userProfile.accountId,
-        createdAt: serverTimestamp()
-      });
-    } catch (error) {
-      console.error("Error adding expense: ", error);
+      const data = await apiFetch('/expenses');
+      setExpenses(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    } catch (err) {
+      console.error('Load expenses error:', err.message);
+    } finally {
+      setLoading(false);
     }
+  }, [userProfile]);
+
+  // Load account members
+  const loadMembers = useCallback(async () => {
+    if (!userProfile) return;
+    try {
+      const data = await apiFetch('/members');
+      setMembers(data);
+    } catch (err) {
+      console.error('Load members error:', err.message);
+    }
+  }, [userProfile]);
+
+  // Load pending invites
+  const loadInvites = useCallback(async () => {
+    if (!userProfile) return;
+    try {
+      const data = await apiFetch('/invites');
+      setPendingInvites(data);
+    } catch (err) {
+      console.warn('Load invites error:', err.message);
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    loadExpenses();
+    loadMembers();
+    loadInvites();
+  }, [loadExpenses, loadMembers, loadInvites]);
+
+  const addExpense = async (expense) => {
+    const newExpense = await apiFetch('/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expense)
+    });
+    setExpenses(prev => [newExpense, ...prev]);
+    return newExpense;
+  };
+
+  const deleteExpense = async (id) => {
+    await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
+    setExpenses(prev => prev.filter(e => e._id !== id));
   };
 
   const sendInvite = async (email) => {
-    if (!userProfile?.accountId) return;
-    try {
-      await addDoc(collection(db, 'invites'), {
-        fromEmail: userProfile.email,
-        fromName: userProfile.name,
-        toEmail: email.toLowerCase(),
-        accountId: userProfile.accountId,
-        status: 'pending',
-        createdAt: serverTimestamp()
-      });
-      
-      // Also add to members collection as "Invited"
-      await addDoc(collection(db, 'members'), {
-        name: email,
-        email: email.toLowerCase(),
-        accountId: userProfile.accountId,
-        status: 'invited'
-      });
-    } catch (error) {
-      console.error("Error sending invite: ", error);
-    }
+    await apiFetch('/invites', { method: 'POST', body: JSON.stringify({ toEmail: email }) });
   };
 
   const acceptInvite = async (invite) => {
-    try {
-      // 1. Update user's accountId to the inviter's accountId
-      const userDocRef = doc(db, 'users', auth.currentUser.uid);
-      await updateDoc(userDocRef, {
-        accountId: invite.accountId
-      });
-
-      // 2. Update invite status
-      const inviteDocRef = doc(db, 'invites', invite.id);
-      await updateDoc(inviteDocRef, {
-        status: 'accepted'
-      });
-
-      // 3. Update member entry in Firestore
-      const membersRef = collection(db, 'members');
-      const qMembers = query(membersRef, where('email', '==', userProfile.email.toLowerCase()), where('accountId', '==', invite.accountId));
-      const querySnapshot = await getDocs(qMembers);
-      
-      querySnapshot.forEach(async (memberDoc) => {
-        await updateDoc(doc(db, 'members', memberDoc.id), {
-          status: 'accepted',
-          name: userProfile.name // Update to their actual name
-        });
-      });
-      
-      // Refresh user profile local state
-      setUserProfile(prev => ({ ...prev, accountId: invite.accountId }));
-      
-    } catch (error) {
-      console.error("Error accepting invite: ", error);
-    }
+    const res = await apiFetch(`/invites/${invite._id}/accept`, { method: 'PATCH' });
+    const updatedProfile = { ...userProfile, accountId: res.accountId };
+    setUserProfile(updatedProfile);
+    localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+    setPendingInvites(prev => prev.filter(i => i._id !== invite._id));
+    await Promise.all([loadExpenses(), loadMembers()]);
   };
 
   const declineInvite = async (invite) => {
-    try {
-      const inviteDocRef = doc(db, 'invites', invite.id);
-      await updateDoc(inviteDocRef, {
-        status: 'declined'
-      });
-    } catch (error) {
-      console.error("Error declining invite: ", error);
-    }
+    await apiFetch(`/invites/${invite._id}/decline`, { method: 'PATCH' });
+    setPendingInvites(prev => prev.filter(i => i._id !== invite._id));
+  };
+
+  const login = async (email, password) => {
+    const data = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    localStorage.setItem('jwt_token', data.token);
+    localStorage.setItem('user_profile', JSON.stringify(data.user));
+    setUserProfile(data.user);
+    return data.user;
+  };
+
+  const updateProfile = async (updates) => {
+    const data = await apiFetch('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+    localStorage.setItem('user_profile', JSON.stringify(data));
+    setUserProfile(data);
+    return data;
+  };
+
+  const register = async (name, email, password) => {
+    const data = await apiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password })
+    });
+    localStorage.setItem('jwt_token', data.token);
+    localStorage.setItem('user_profile', JSON.stringify(data.user));
+    setUserProfile(data.user);
+    return data.user;
+  };
+
+  const logout = () => {
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('user_profile');
+    setUserProfile(null);
+    setExpenses([]);
+    setPendingInvites([]);
   };
 
   return (
-    <ExpenseContext.Provider value={{ 
-      expenses, 
-      addExpense, 
-      members,
-      sendInvite,
-      pendingInvites,
-      acceptInvite,
-      declineInvite,
-      userProfile,
-      loading
+    <ExpenseContext.Provider value={{
+      userProfile, expenses, members, pendingInvites, loading,
+      startingBalance: userProfile?.startingBalance || 0,
+      addExpense, deleteExpense, sendInvite, acceptInvite, declineInvite,
+      login, register, logout, loadExpenses, loadMembers, updateProfile
     }}>
       {children}
     </ExpenseContext.Provider>
   );
 };
-
-

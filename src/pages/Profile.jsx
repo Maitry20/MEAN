@@ -1,27 +1,24 @@
-import React from 'react';
-import { auth } from '../firebase/config';
-import { signOut } from 'firebase/auth';
+import { useExpenses } from '../context/ExpenseContext';
+import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { User, Mail, Shield, Bell, LogOut } from 'lucide-react';
+import { User, Shield, Bell, LogOut } from 'lucide-react';
 
 const Profile = () => {
-  const currentUser = auth.currentUser;
+  const { userProfile, logout } = useExpenses();
+  const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Logout error', error);
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
-  // User data from Firebase Auth
+  // User data from Context
   const user = {
-    name: currentUser?.displayName || 'User',
-    email: currentUser?.email || 'No email provided',
+    name: userProfile?.name || 'User',
+    email: userProfile?.email || 'No email provided',
     role: 'Account Owner',
-    joined: currentUser?.metadata.creationTime ? new Date(currentUser.metadata.creationTime).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'March 2026'
+    joined: userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'March 2026'
   };
 
   return (
@@ -64,6 +61,14 @@ const Profile = () => {
           <p style={{ marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
             Member since {user.joined}
           </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            style={{ marginTop: '1rem', width: '100%' }}
+            onClick={() => navigate('/')}
+          >
+            Manage Goals on Dashboard
+          </Button>
         </Card>
 
         {/* Account Settings */}

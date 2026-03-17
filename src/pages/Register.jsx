@@ -4,11 +4,10 @@ import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { Wallet } from 'lucide-react';
-
-import { auth } from '../firebase/config';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { useExpenses } from '../context/ExpenseContext';
 
 const Register = () => {
+  const { register } = useExpenses();
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,12 +24,10 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      await updateProfile(userCredential.user, { displayName: formData.name });
+      await register(formData.name, formData.email, formData.password);
       navigate('/');
     } catch (err) {
-      console.error('Registration error', err);
-      setError('Failed to create account. ' + err.message);
+      setError(err.message || 'Failed to create account.');
     } finally {
       setLoading(false);
     }

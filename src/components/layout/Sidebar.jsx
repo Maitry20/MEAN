@@ -1,16 +1,14 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, List, Settings, LogOut, UserCircle, Users, PieChart, Info } from 'lucide-react';
-import { auth } from '../../firebase/config';
-import { signOut } from 'firebase/auth';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, PlusCircle, List, LogOut, UserCircle, Users, Calendar } from 'lucide-react';
+import { useExpenses } from '../../context/ExpenseContext';
 
 const Sidebar = ({ isOpen, closeSidebar }) => {
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Logout error', error);
-    }
+  const { logout } = useExpenses();
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const navItems = [
@@ -19,6 +17,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
     { name: 'Account Members', path: '/members', icon: <Users size={20} /> },
     { name: 'Add Expense', path: '/add-expense', icon: <PlusCircle size={20} /> },
     { name: 'History', path: '/history', icon: <List size={20} /> },
+    { name: 'View Month', path: '/reports', icon: <Calendar size={20} /> },
   ];
 
   return (

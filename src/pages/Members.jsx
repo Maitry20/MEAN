@@ -68,44 +68,45 @@ const Members = () => {
         <Card>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <User size={20} color="var(--primary)" />
-            Current & Pending Members
+            Account Members
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {members.map((member) => (
-              <div 
-                key={member.id} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '1rem',
-                  backgroundColor: 'var(--bg-color)',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-color)',
-                  opacity: member.status === 'invited' ? 0.7 : 1
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ 
-                    width: '40px', height: '40px', 
-                    borderRadius: '50%', 
-                    backgroundColor: member.status === 'invited' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    {member.status === 'invited' ? <Clock size={20} color="#f59e0b" /> : <User size={20} color="var(--primary)" />}
+            {members.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>No other members yet.</p>
+            ) : (
+              members.map((member) => (
+                <div 
+                  key={member.id} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '1rem',
+                    backgroundColor: 'var(--bg-color)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ 
+                      width: '40px', height: '40px', 
+                      borderRadius: '50%', 
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <User size={20} color="var(--primary)" />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{member.name || 'Anonymous Member'}</h4>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {member.email}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{member.name}</h4>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {member.status === 'invited' ? 'Waiting for acceptance...' : member.email}
-                    </p>
-                  </div>
-                </div>
-                {member.status !== 'invited' && (
                   <CheckCircle size={18} color="var(--success)" />
-                )}
-              </div>
-            ))}
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>
