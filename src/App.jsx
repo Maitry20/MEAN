@@ -45,6 +45,7 @@ const AppRoutes = () => {
       <Route path="/" element={isAuthenticated ? <AppLayout><Dashboard /></AppLayout> : <Navigate to="/login" />} />
       <Route path="/add-expense" element={isAuthenticated ? <AppLayout><AddExpense /></AppLayout> : <Navigate to="/login" />} />
       <Route path="/history" element={isAuthenticated ? <AppLayout><ExpenseHistory /></AppLayout> : <Navigate to="/login" />} />
+      <Route path="/members" element={isAuthenticated ? <AppLayout><Members /></AppLayout> : <Navigate to="/login" />} />
       <Route path="/investment-plan" element={isAuthenticated ? <AppLayout><InvestmentPlan /></AppLayout> : <Navigate to="/login" />} />
       <Route path="/savings-goal" element={isAuthenticated ? <AppLayout><SavingsGoal /></AppLayout> : <Navigate to="/login" />} />
       <Route path="/reports" element={isAuthenticated ? <AppLayout><MonthlyReport /></AppLayout> : <Navigate to="/login" />} />

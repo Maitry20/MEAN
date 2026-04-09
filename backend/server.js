@@ -148,6 +148,14 @@ app.use('/api/members', memberRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/reports', reportRoutes);
 
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' 
+  });
+});
+
 // Simple Test Route
 app.get('/test', (req, res) => res.send('API is Working!'));
 app.get('/', (req, res) => res.send('Expense Tracker Backend API is running! 🚀'));
@@ -160,7 +168,10 @@ app.use((err, req, res, next) => {
 
 // Connect to MongoDB and start server
 const PORT = process.env.PORT || 5001;
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
+})
   .then(() => {
     console.log('✅ Connected to MongoDB Atlas');
     app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
