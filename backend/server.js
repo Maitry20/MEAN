@@ -180,3 +180,5 @@ mongoose.connect(process.env.MONGO_URI, {
     console.error('❌ MongoDB connection failed:', err.message);
     process.exit(1);
   });
+
+module.exports = app;
